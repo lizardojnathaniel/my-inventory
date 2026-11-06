@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rig Inventory</title>
+<style>
+:root{--bg:#eceff1;--sf:#fff;--tx:#14202a;--mu:#62707b;--bd:#cfd6db;--ac:#0b5cab;--ac2:#e3eefa;--in:#14783f;--out:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12181d;--sf:#1b242b;--tx:#e8edf0;--mu:#93a1ab;--bd:#33414b;--ac:#5aa7f0;--ac2:#1f3345;--in:#4cc38a;--out:#ff8a80}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#12181d;--sf:#1b242b;--tx:#e8edf0;--mu:#93a1ab;--bd:#33414b;--ac:#5aa7f0;--ac2:#1f3345;--in:#4cc38a;--out:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+label{display:flex;align-items:center;gap:6px;color:var(--mu)}
+.pronly{display:none}
+@media print{header,#tabs,#list,.noprint,#rep .row{display:none!important}.pronly{display:block}main{display:block;padding:0}*{color:#000!important;background:#fff!important}}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px;background:var(--sf);border-bottom:1px solid var(--bd)}
+h1{font-size:20px;margin:0;flex:1 1 auto}
+input,select,button{font:inherit;color:var(--tx)}
+input,select{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;min-width:0}
+button{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+#tabs{display:flex;gap:4px;overflow-x:auto;padding:10px 16px 0;background:var(--sf);border-bottom:1px solid var(--bd)}
+.tab{border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;white-space:nowrap;background:none;color:var(--mu)}
+.tab span{font-size:12px;margin-left:4px}
+.tab.on{background:var(--bg);border-color:var(--bd);color:var(--tx);font-weight:600;margin-bottom:-1px}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;padding:16px;max-width:1200px;margin:0 auto}
+@media (max-width:800px){main{grid-template-columns:1fr}}
+section{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:14px}
+h2{font-size:16px;margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.row input{flex:1 1 90px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{color:var(--mu);font-weight:500;font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.it{cursor:pointer}
+tr.it:hover,tr.sel{background:var(--ac2)}
+.in{color:var(--in);font-weight:600}.out{color:var(--out);font-weight:600}
+.big{font-size:28px;font-weight:700}
+.mu{color:var(--mu)}
+.x{padding:2px 8px}
+</style></head><body>
+<header>
+<h1>Rig Inventory</h1>
+<span id="st" class="mu" role="status"></span>
+<input id="q" type="search" placeholder="Search items (separate with commas)" aria-label="Search items">
+<button id="rpt">Date report</button><button id="csv">Export CSV</button><button id="exp">Backup</button>
+<button id="imp">Restore</button><input id="file" type="file" accept=".json" hidden>
+</header>
+<nav id="tabs" role="tablist"></nav>
+<main id="mn"><section id="list"></section><section id="det"></section></main>
+<main id="rm" hidden><section id="rep" style="grid-column:1/-1"></section></main>
+<script>
+const CATS=["Accumulator","Drawworks","Mud Pump","Mud System","BOP","SCR","Top Drive & ST80","Lift","Handling Tools & Rotating","Generator","Electrical","Consumables"];
+const K="rig-inv-v1";
+let S={items:[]},cat=0,sel=null,q="",armed=null;
+try{const r=localStorage.getItem(K);if(r)S=JSON.parse(r)}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}queueSync()};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const bal=i=>i.tx.reduce((a,t)=>a+(t.type==="IN"?t.q:-t.q),0);
+const today=()=>new Date().toISOString().slice(0,10);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const find=id=>S.items.find(x=>x.id===id);
+
+function render(){
+  $("tabs").innerHTML=`<button class="tab${cat===-1?" on":""}" role="tab" data-tab="-1">All Items<span>${S.items.length}</span></button>`+CATS.map((c,i)=>`<button class="tab${i===cat?" on":""}" role="tab" data-tab="${i}">${esc(c)}<span>${S.items.filter(x=>x.cat===i).length}</span></button>`).join("");
+  renderList();renderDet();
+}
+function renderList(){
+  const items=S.items.filter(x=>(cat===-1||x.cat===cat)&&(!terms(q).length||terms(q).some(w=>(x.name+" "+(x.pn||"")).toLowerCase().includes(w)))&&(!SUBS[cat]||sub==="ALL"||(SUBS[cat].includes(x.sub)?x.sub:"NONE")===sub)).sort((a,b)=>cat===-1?a.name.localeCompare(b.name):0);
+  $("list").innerHTML=`<h2>${cat===-1?"All Items (A to Z)":esc(CATS[cat])}</h2>
+  ${SUBS[cat]?subBar():""}
+  ${cat===-1?`<p class="mu">This list shows every item from all tabs. Add new items inside their own tab.</p>`:`<div class="row"><input id="nn" placeholder="New item name" aria-label="Item name"><input id="nu" placeholder="Unit (pcs, set…)" aria-label="Unit"><input id="np" placeholder="Part no. (optional)" aria-label="Part number"><input id="no" type="number" min="0" placeholder="Opening stock" aria-label="Opening stock"><input id="nd" type="date" value="${today()}" aria-label="Date added" title="Date added">${SUBS[cat]?`<select id="ns" aria-label="Section">${SUBS[cat].map(s=>`<option${s===sub?" selected":""}>${esc(s)}</option>`).join("")}</select>`:""}<button class="p" data-act="add">Add item</button></div>`}
+  ${items.length?`<div class="scroll"><table><thead><tr><th>Item</th><th class="n">In stock</th></tr></thead><tbody>${items.map(i=>`<tr class="it${i.id===sel?" sel":""}" tabindex="0" data-item="${i.id}"><td>${esc(i.name)}${i.pn?` <span class="mu">P/N ${esc(i.pn)}</span>`:""}${cat===-1?` <span class="mu">${esc(CATS[i.cat])}${i.sub?" / "+esc(i.sub):""}</span>`:""}</td><td class="n">${bal(i)} <span class="mu">${esc(i.unit)}</span></td></tr>`).join("")}</tbody></table></div>`:`<p class="mu">${q?"No items match your search.":"No items in this tab yet. Add the first item above."}</p>`}`;
+}
+function renderDet(){
+  const i=find(sel);
+  if(!i||(cat!==-1&&i.cat!==cat)){$("det").innerHTML=`<h2>Item history</h2><p class="mu">Click an item to see its stock in, stock out and who withdrew it.</p>`;return}
+  let run=0;
+  const rows=[...i.tx].sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0).map(t=>{run+=t.type==="IN"?t.q:-t.q;return{...t,b:run}}).filter(t=>(!hf||t.d>=hf)&&(!ht||t.d<=ht)).reverse();
+  $("det").innerHTML=`<h2>${esc(i.name)}</h2>
+  ${i.pn?`<p class="pronly">Part no. ${esc(i.pn)}</p>`:""}<p class="noprint"><label>Part no. <input id="ip" value="${esc(i.pn||"")}" placeholder="optional"></label></p>
+  ${SUBS[i.cat]?`<p class="noprint"><label>Section <select id="is"><option value="">Unassigned</option>${SUBS[i.cat].map(s=>`<option${i.sub===s?" selected":""}>${esc(s)}</option>`).join("")}</select></label></p>${i.sub?`<p class="pronly">${esc(i.sub)}</p>`:""}`:""}
+  <div class="big">${bal(i)} <span class="mu" style="font-size:15px;font-weight:400">${esc(i.unit)} in stock</span></div>
+  <div class="row noprint" style="margin-top:12px">
+   <select id="tt" aria-label="Type"><option value="IN">Stock in</option><option value="OUT">Stock out</option></select>
+   <input id="tq" type="number" min="1" placeholder="Qty" aria-label="Quantity">
+   <input id="td" type="date" value="${today()}" aria-label="Date">
+   <input id="tw" placeholder="Received from / Withdrawn by" aria-label="Name">
+   <input id="tn" placeholder="Remarks (rig, job, PO…)" aria-label="Remarks">
+   <button class="p" data-act="tx">Save entry</button></div>
+  <p id="err" class="out noprint" role="alert"></p>
+  <p class="pronly">Printed ${today()}${hf||ht?". Showing "+(hf||"start")+" to "+(ht||"latest"):""}</p>
+  <div class="row noprint"><label>History from <input id="hf" type="date" value="${hf}"></label><label>to <input id="ht" type="date" value="${ht}"></label><button data-act="hclr">Show all dates</button><button data-act="hprint">Print history</button></div>
+  <p class="mu">${rows.length} entries shown: ${rows.filter(t=>t.type==="IN").reduce((a,t)=>a+t.q,0)} ${esc(i.unit)} in, ${rows.filter(t=>t.type==="OUT").reduce((a,t)=>a+t.q,0)} ${esc(i.unit)} out</p>
+  ${rows.length?`<div class="scroll"><table><thead><tr><th>Date</th><th>Type</th><th class="n">Qty</th><th>Name</th><th>Remarks</th><th class="n">Balance</th><th></th></tr></thead><tbody>${rows.map(t=>`<tr><td>${esc(t.d)}</td><td class="${t.type==="IN"?"in":"out"}">${t.type==="IN"?"Stock in":"Stock out"}</td><td class="n">${t.q}</td><td>${esc(t.w)}</td><td>${esc(t.n)}</td><td class="n">${t.b}</td><td><button class="x noprint" data-del="${t.id}" aria-label="Delete entry">${armed===t.id?"Sure?":"✕"}</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="mu">No history yet. Record the first stock in above.</p>`}
+  <p class="noprint"><button data-act="rm">${armed==="item"?"Sure? Delete item and history":"Delete item"}</button></p>`;
+}
+function err(m){const e=$("err");if(e)e.textContent=m}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-tab],[data-item],[data-act],[data-del],[data-sub]");
+  if(!t)return;
+  armed=t.dataset.del||t.dataset.act==="rm"?armed:null;
+  if(t.dataset.tab!==undefined){cat=+t.dataset.tab;sub="ALL";sel=null;q="";$("q").value="";render()}
+  else if(t.dataset.item){sel=t.dataset.item;armed=null;renderList();renderDet()}
+  else if(t.dataset.act==="add"){
+    const name=$("nn").value.trim();if(!name)return $("nn").focus();
+    const it={id:uid(),cat,name,unit:$("nu").value.trim()||"pcs",pn:$("np").value.trim(),sub:$("ns")?$("ns").value:"",tx:[]};
+    const o=parseInt($("no").value);
+    if(o>0)it.tx.push({id:uid(),type:"IN",q:o,d:$("nd").value||today(),w:"",n:"Opening stock"});
+    S.items.push(it);sel=it.id;save();render()}
+  else if(t.dataset.act==="tx"){
+    const i=find(sel),type=$("tt").value,qty=parseInt($("tq").value),w=$("tw").value.trim();
+    if(!(qty>0))return err("Enter a quantity greater than 0.");
+    
+    if(type==="OUT"&&qty>bal(i))return err("Only "+bal(i)+" "+i.unit+" in stock.");
+    i.tx.push({id:uid(),type,q:qty,d:$("td").value||today(),w,n:$("tn").value.trim()});
+    save();render()}
+  else if(t.dataset.del){
+    if(armed!==t.dataset.del){armed=t.dataset.del;return renderDet()}
+    const i=find(sel);i.tx=i.tx.filter(x=>x.id!==armed);armed=null;
+    if(bal(i)<0){i.tx.push({id:uid(),type:"IN",q:-bal(i),d:today(),w:"",n:"Adjustment"})}
+    save();render()}
+  else if(t.dataset.sub){sub=t.dataset.sub;sel=null;renderList();renderDet()}
+  else if(t.dataset.act==="hclr"){hf="";ht="";renderDet()}
+  else if(t.dataset.act==="hprint"){try{window.print()}catch(x){}}
+  else if(t.dataset.act==="rm"){
+    if(armed!=="item"){armed="item";return renderDet()}
+    S.items=S.items.filter(x=>x.id!==sel);sel=null;armed=null;save();render()}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.item){sel=e.target.dataset.item;renderList();renderDet()}});
+$("q").addEventListener("input",e=>{q=e.target.value;renderList()});
+$("exp").onclick=()=>dl("rig-inventory-backup.json",JSON.stringify(S),"application/json");
+$("csv").onclick=()=>{
+  const c=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const L=[["Category","Item","Part No","Unit","Date","Type","Qty","Name","Remarks"].map(c).join(",")];
+  S.items.forEach(i=>i.tx.forEach(t=>L.push([CATS[i.cat]+(i.sub?" / "+i.sub:""),i.name,i.pn||"",i.unit,t.d,t.type,t.q,t.w,t.n].map(c).join(","))));
+  dl("rig-inventory-history.csv",L.join("\n"),"text/csv")};
+function dl(n,s,m){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([s],{type:m}));a.download=n;a.click()}
+$("imp").onclick=()=>$("file").click();
+$("file").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(Array.isArray(d.items)){S=d;sel=null;save();render()}}catch(x){}};r.readAsText(f)};
+const SUBS={9:["MTU ENGINE","TDS HPU","CAT 3512","150 KVA","ATLAS COPCO"]};
+let sub="ALL";
+function subBar(){const L=S.items.filter(x=>x.cat===cat),un=L.filter(x=>!SUBS[cat].includes(x.sub)).length;const o=[["ALL","All",L.length],...SUBS[cat].map(s=>[s,s,L.filter(x=>x.sub===s).length])];if(un)o.push(["NONE","Unassigned",un]);return `<div class="row">${o.map(([v,n,c])=>`<button class="${v===sub?"p":""}" data-sub="${esc(v)}">${esc(n)} ${c}</button>`).join("")}</div>`}
+const terms=s=>s.toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
+function pickHtml(){
+ const L=S.items.filter(i=>(rc==="ALL"||String(i.cat)===rc)&&(rs==="ALL"||!SUBS[rc]||(SUBS[rc].includes(i.sub)?i.sub:"NONE")===rs)&&(!terms(rq).length||terms(rq).some(w=>(i.name+" "+(i.pn||"")).toLowerCase().includes(w)))).sort((a,b)=>a.cat-b.cat||a.name.localeCompare(b.name));
+ return `<details id="rd" class="noprint"${ropen?" open":""} style="margin-bottom:10px"><summary>Pick items${rsel.length?" ("+rsel.length+" selected)":""}</summary>${rsel.length?`<div class="row" style="margin-top:8px">${rsel.map(id=>{const x=find(id);return x?`<button data-unpick="${id}">${esc(x.name)} (${esc(CATS[x.cat])}) ✕</button>`:""}).join("")}</div><p class="mu">The report shows these picked items from all tabs. Change the tab or search below to find more items to tick.</p>`:""}<div class="row" style="margin-top:8px"><button id="rclr">Clear selection</button></div><div style="max-height:220px;overflow:auto">${L.length?L.map(i=>`<label style="padding:4px 0"><input type="checkbox" data-pick="${i.id}"${rsel.includes(i.id)?" checked":""}>${esc(i.name)} <span class="mu">${esc(CATS[i.cat])}${i.sub?" / "+esc(i.sub):""}</span></label>`).join(""):`<p class="mu">No items to pick.</p>`}</div></details>`}
+let rv=false,rf=today(),rt=today(),rk="ALL",rc="ALL",rq="",rs="ALL",rsel=[],ropen=false,hf="",ht="";
+function repRows(){const r=[];S.items.forEach(i=>{if(rsel.length?!rsel.includes(i.id):(rc!=="ALL"&&String(i.cat)!==rc)||(rs!=="ALL"&&SUBS[rc]&&(SUBS[rc].includes(i.sub)?i.sub:"NONE")!==rs)||(rsel.length&&!rsel.includes(i.id))||(terms(rq).length&&!terms(rq).some(w=>(i.name+" "+(i.pn||"")).toLowerCase().includes(w))))return;let run=0;[...i.tx].sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0).forEach(t=>{run+=t.type==="IN"?t.q:-t.q;if(t.d>=rf&&t.d<=rt&&(rk==="ALL"||t.type===rk))r.push({c:CATS[i.cat]+(i.sub?" / "+i.sub:""),i:i.name,p:i.pn||"",u:i.unit,b:run,...t})})});return r.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.c<b.c?-1:a.c>b.c?1:a.i<b.i?-1:a.i>b.i?1:0)}
+function renderRep(){
+  const r=repRows(),ni=r.filter(x=>x.type==="IN").length,no=r.length-ni;
+  $("rep").innerHTML=`<h2>Transactions by date</h2>
+  <p class="pronly">From ${rf} to ${rt}${rk!=="ALL"?", "+(rk==="IN"?"stock in only":"stock out only"):""}${!rsel.length&&rc!=="ALL"?", tab: "+esc(CATS[+rc]):""}${!rsel.length&&rs!=="ALL"?", section: "+esc(rs==="NONE"?"Unassigned":rs):""}${rsel.length?", items: "+rsel.map(id=>{const x=find(id);return x?esc(x.name):""}).join(", "):""}${!rsel.length&&rq?", item: "+esc(rq):""}</p>
+  <div class="row"><label>From <input id="rf" type="date" value="${rf}"></label><label>To <input id="rt" type="date" value="${rt}"></label>
+  <select id="rk" aria-label="Type"><option value="ALL">All transactions</option><option value="IN">Stock in only</option><option value="OUT">Stock out only</option></select>
+  <select id="rc" aria-label="Tab"><option value="ALL">All tabs</option>${CATS.map((c,i)=>`<option value="${i}">${esc(c)}</option>`).join("")}</select>${SUBS[rc]?`<select id="rs" aria-label="Section"><option value="ALL">All sections</option>${SUBS[rc].map(s=>`<option>${esc(s)}</option>`).join("")}<option value="NONE">Unassigned</option></select>`:""}<input id="rq" type="search" placeholder="Item names, separated by commas" value="${esc(rq)}" aria-label="Filter by item name">
+  <button id="rcsv">Export CSV</button><button id="rprint">Print</button></div>
+  ${pickHtml()}<p class="mu">${r.length} transactions: ${ni} stock in, ${no} stock out. Set both dates the same for a single day.</p>
+  ${r.length?`<div class="scroll"><table><thead><tr><th>Date</th><th>Tab</th><th>Item</th><th>Type</th><th class="n">Qty</th><th>Name</th><th>Remarks</th><th class="n">Remaining</th></tr></thead><tbody>${r.map(t=>`<tr><td>${esc(t.d)}</td><td>${esc(t.c)}</td><td>${esc(t.i)}${t.p?` <span class="mu">P/N ${esc(t.p)}</span>`:""}</td><td class="${t.type==="IN"?"in":"out"}">${t.type==="IN"?"Stock in":"Stock out"}</td><td class="n">${t.q}</td><td>${esc(t.w)}</td><td>${esc(t.n)}</td><td class="n">${t.b} <span class="mu">${esc(t.u)}</span></td></tr>`).join("")}</tbody></table></div>`:`<p class="mu">No transactions on these dates. Try a different date or range.</p>`}`;
+  $("rk").value=rk;
+  $("rf").onchange=e=>{rf=e.target.value||rf;if(rt<rf)rt=rf;renderRep()};
+  $("rt").onchange=e=>{rt=e.target.value||rt;if(rt<rf)rf=rt;renderRep()};
+  $("rk").onchange=e=>{rk=e.target.value;renderRep()};
+  $("rc").value=rc;
+  $("rc").onchange=e=>{rc=e.target.value;rs="ALL";renderRep()};
+  if($("rs")){$("rs").value=rs;$("rs").onchange=e=>{rs=e.target.value;renderRep()}}
+  $("rd").ontoggle=e=>{ropen=e.target.open};
+  $("rclr").onclick=()=>{rsel=[];renderRep()};
+  document.querySelectorAll("[data-unpick]").forEach(b=>b.onclick=()=>{rsel=rsel.filter(x=>x!==b.dataset.unpick);renderRep()});
+  $("rq").oninput=e=>{rq=e.target.value;renderRep();const x=$("rq");x.focus();x.setSelectionRange(x.value.length,x.value.length)};
+  $("rprint").onclick=()=>{try{window.print()}catch(x){}};
+  $("rcsv").onclick=()=>{
+    const c=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const L=[["Date","Tab","Item","Part No","Type","Qty","Name","Remarks","Remaining"].map(c).join(",")];
+    repRows().forEach(t=>L.push([t.d,t.c,t.i,t.p,t.type,t.q,t.w,t.n,t.b].map(c).join(",")));
+    dl("transactions-"+rf+"_to_"+rt+".csv",L.join("\n"),"text/csv")};
+}
+document.addEventListener("change",e=>{const id=e.target.id;if(id==="hf"){hf=e.target.value;renderDet()}else if(id==="ht"){ht=e.target.value;renderDet()}else if(id==="ip"){const i=find(sel);if(i){i.pn=e.target.value.trim();save();render()}}else if(id==="is"){const i=find(sel);if(i){i.sub=e.target.value;save();render()}}else if(e.target.dataset.pick){const p=e.target.dataset.pick;rsel=e.target.checked?[...rsel,p]:rsel.filter(x=>x!==p);renderRep()}});
+$("rpt").onclick=()=>{
+  rv=!rv;
+  $("mn").hidden=rv;$("rm").hidden=!rv;$("tabs").hidden=rv;$("q").hidden=rv;
+  $("rpt").textContent=rv?"Back to inventory":"Date report";
+  if(rv)renderRep();
+};
+const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==="object"&&!Array.isArray(v)?Object.keys(v).sort().reduce((a,x)=>(a[x]=v[x],a),{}):v);
+const sig=a=>canon(a.slice().sort((x,y)=>x.id<y.id?-1:1));
+let DB=null,synced={},chain=Promise.resolve();
+const MK=K+"-shared";
+function stat(m){const e=$("st");if(e)e.textContent=m}
+function queueSync(){chain=chain.then(runSync).catch(()=>{})}
+async function runSync(){
+  if(!DB)return;
+  const cur={};S.items.forEach(i=>cur[i.id]=canon(i));
+  for(const id in cur){
+    if(synced[id]===cur[id])continue;
+    const prev=synced[id];synced[id]=cur[id];
+    try{await DB.collection("items").doc(id).set(JSON.parse(cur[id]));stat("Shared: all changes saved")}
+    catch(e){synced[id]=prev;stat(e.code==="invalid_argument"?"View only: changes are not saved to the shared data. Ask the owner for Contributor access.":"Could not save to the shared data. It will retry on your next change.")}
+  }
+  for(const id of Object.keys(synced)){
+    if(id in cur)continue;
+    try{await DB.collection("items").doc(id).delete();delete synced[id]}catch(e){}
+  }
+}
+function applyRemote(docs){
+  const remote={},local={},next=[];
+  docs.forEach(d=>{remote[d.id]=Object.assign({},d.data(),{id:d.id})});
+  S.items.forEach(i=>local[i.id]=i);
+  for(const id in remote){
+    const l=local[id];
+    if(l&&synced[id]!==undefined&&synced[id]!==canon(l))next.push(l);
+    else{next.push(remote[id]);synced[id]=canon(remote[id])}
+  }
+  for(const id in local){
+    if(id in remote)continue;
+    const l=local[id];
+    if(synced[id]===undefined||synced[id]!==canon(l))next.push(l);
+    else delete synced[id];
+  }
+  if(sig(next)!==sig(S.items)){
+    S.items=next;
+    try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
+    render();
+  }
+}
+(async()=>{
+  let db=null;
+  try{db=window.claude?await claude.use("db"):null}catch(e){}
+  if(!db){stat("Saved on this device only. Shared storage is not available here.");return}
+  DB=db;stat("Connecting to shared data...");
+  let migrated=false;
+  try{migrated=!!localStorage.getItem(MK)}catch(e){}
+  if(migrated)S.items.forEach(i=>synced[i.id]=canon(i));
+  const tm=setTimeout(()=>stat("Can't reach shared data yet. Showing this device's copy."),10000);
+  DB.collection("items").onSnapshot(snap=>{
+    if(snap.metadata.fromCache)return;
+    clearTimeout(tm);
+    applyRemote(snap.docs);
+    if(!migrated){migrated=true;try{localStorage.setItem(MK,"1")}catch(e){}}
+    stat("Shared: connected");queueSync();
+  },e=>{clearTimeout(tm);stat(e.code==="revoked"?"Access to the shared data was removed.":"Shared data error ("+e.code+"). Showing this device's copy.")});
+})();
+render();
+</script></body></html>
