@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rig Site Inventory</title>
+<style>
+:root{--bg:#eceff1;--sf:#fff;--tx:#14202a;--mu:#62707b;--bd:#cfd6db;--ac:#0b5cab;--ac2:#e3eefa;--in:#14783f;--out:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#12181d;--sf:#1b242b;--tx:#e8edf0;--mu:#93a1ab;--bd:#33414b;--ac:#5aa7f0;--ac2:#1f3345;--in:#4cc38a;--out:#ff8a80}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#12181d;--sf:#1b242b;--tx:#e8edf0;--mu:#93a1ab;--bd:#33414b;--ac:#5aa7f0;--ac2:#1f3345;--in:#4cc38a;--out:#ff8a80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+label{display:flex;align-items:center;gap:6px;color:var(--mu)}
+.pronly{display:none}
+#lbl{display:none}
+.lb{border:1px solid #000;padding:3mm;break-inside:avoid;font-size:12px;overflow:hidden}
+.lb b{display:block;font-size:13px}
+.lb svg{width:100%;height:14mm;display:block;margin:2mm 0 1mm}
+.lb .c{text-align:center;font-size:11px;letter-spacing:1px}
+#scan{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:12px}
+.sbox{background:var(--sf);border-radius:10px;padding:14px;max-width:420px;width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:8px}
+.sbox h2{margin:0}
+#scanbox{width:100%;min-height:120px;background:#000;border-radius:6px}
+h3{font-size:15px;margin:14px 0 6px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:8px 0 12px}
+.card{border:1px solid var(--bd);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column}
+.card b{font-size:20px;line-height:1.3}
+body.view .mo{display:none!important}
+body.locked header,body.locked #tabs,body.locked main{display:none!important}
+#gate{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.gbox{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:24px;max-width:340px;width:100%;display:flex;flex-direction:column;gap:12px;text-align:center}
+.gbox .logo{align-self:center;height:56px}.gbox h2{margin:0}.gbox button{width:100%;padding:12px}.gbox label{flex-direction:column;align-items:stretch;text-align:left}
+#g1,#g2,#g3{display:flex;flex-direction:column;gap:10px}
+.logo{height:40px;width:auto;background:#fff;border-radius:6px;padding:3px 8px}
+@media print{header,#tabs,#fb,#ib,#scan,#list,.noprint,#rep .row{display:none!important}.pronly{display:block}main{display:block;padding:0}body.plist #det{display:none!important}body.plabels main,body.plabels #gate{display:none!important}body.plabels #lbl{display:grid!important;grid-template-columns:repeat(3,1fr);gap:6mm}body.plist #list{display:block!important}*{color:#000!important;background:#fff!important}}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px 16px;background:var(--sf);border-bottom:1px solid var(--bd)}
+h1{font-size:20px;margin:0;flex:1 1 auto}
+input,select,button{font:inherit;color:var(--tx)}
+input,select{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;min-width:0}
+button{background:var(--sf);border:1px solid var(--bd);border-radius:6px;padding:8px 12px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,tr:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+#tabs{display:flex;gap:4px;overflow-x:auto;padding:10px 16px 0;background:var(--sf);border-bottom:1px solid var(--bd)}
+.tab{border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;white-space:nowrap;background:none;color:var(--mu)}
+.tab span{font-size:12px;margin-left:4px}
+.tab.on{background:var(--bg);border-color:var(--bd);color:var(--tx);font-weight:600;margin-bottom:-1px}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;padding:16px;max-width:1200px;margin:0 auto}
+@media (max-width:800px){main{grid-template-columns:1fr}}
+section{background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:14px}
+h2{font-size:16px;margin:0 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.row input{flex:1 1 90px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{color:var(--mu);font-weight:500;font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+tr.it{cursor:pointer}
+tr.it:hover,tr.sel{background:var(--ac2)}
+.in{color:var(--in);font-weight:600}.out{color:var(--out);font-weight:600}
+.big{font-size:28px;font-weight:700}
+.mu{color:var(--mu)}
+.x{padding:2px 8px}
+</style><link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#0b7a3a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="JNL Inventory">
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+</head><body class="locked">
+<div id="gate"><div class="gbox"><img id="gl" class="logo" alt="JNL"><h2>Rig Site Inventory</h2>
+<div id="g1"><button class="p" id="gm">Master account</button><button id="gv">View only</button></div>
+<div id="g2" hidden><label>Email <input id="gem" type="email" autocomplete="username"></label><label>Password <input id="gp" type="password" autocomplete="current-password"></label><p id="ge" class="out" role="alert"></p><button class="p" id="gok">Enter</button><button id="gb">Back</button></div>
+<div id="g3" hidden><label>Password <input id="gvp" type="password" autocomplete="off"></label><p id="gve" class="out" role="alert"></p><button class="p" id="gvok">Enter</button><button id="gvb">Back</button></div>
+</div></div>
+<header>
+<img id="lg" class="logo" alt="JNL">
+<h1>Rig Site Inventory</h1>
+<span id="st" class="mu" role="status"></span>
+<input id="q" type="search" placeholder="Search items (separate with commas)" aria-label="Search items">
+<button id="scanb">Scan</button><button id="bwb" class="mo">Batch withdraw</button><button id="rpt">Date report</button><button id="csv">Export CSV</button><button id="exp" class="mo">Backup</button>
+<button id="imp">Restore</button><button id="xex">Export Excel</button><button id="ximp">Import Excel</button><input id="xfile" type="file" accept=".xlsx,.xls" hidden><button id="out">Log out</button><input id="file" type="file" accept=".json" hidden>
+</header>
+<nav id="tabs" role="tablist"></nav>
+<div id="ib" hidden style="padding:10px 16px;background:var(--ac2)"><p id="ibt" style="margin:0 0 8px"></p><div class="row" style="margin:0"><button class="p" id="ibr">Replace all data</button><button id="iba">Add new items only</button><button id="ibc">Cancel</button></div></div>
+<div id="fb" hidden style="padding:8px 16px;background:var(--ac2);display:flex;flex-wrap:wrap;gap:8px;align-items:center"><span id="fbt"></span><button id="fbx">Back to live data</button><button id="fbd">Delete saved copy</button></div>
+<main id="mn"><section id="list"></section><section id="det"></section></main>
+<main id="rm" hidden><section id="rep" style="grid-column:1/-1"></section></main>
+<main id="bm" hidden><section id="bt" style="grid-column:1/-1"></section></main>
+<div id="lbl"></div>
+<div id="scan" hidden><div class="sbox"><h2 id="stitle">Scan</h2><div id="scanbox"></div><p id="smsg" class="mu" role="status"></p><div class="row"><input id="scode" placeholder="Or type or scan a code" aria-label="Code"><button id="sgo">Use code</button></div><button id="sclose">Close</button></div></div>
+<script>
+const CATS=["Accumulator","Drawworks","Mud Pump","Mud System","BOP","SCR","Top Drive & ST80","Lift","Handling Tools & Rotating","Generator","Electrical","Consumables"];
+const K="rig-inv-v1";
+let S={items:[]},cat=0,sel=null,q="",armed=null;
+try{const r=localStorage.getItem(K);if(r)S=JSON.parse(r)}catch(e){}
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}queueSync()};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const bal=i=>i.tx.reduce((a,t)=>a+(t.type==="IN"?t.q:-t.q),0);
+const today=()=>new Date().toISOString().slice(0,10);
+const uid=()=>Math.random().toString(36).slice(2,9);
+const find=id=>S.items.find(x=>x.id===id);
+
+function render(){
+  $("tabs").innerHTML=`<button class="tab${cat===-1?" on":""}" role="tab" data-tab="-1">All Items<span>${S.items.length}</span></button>`+CATS.map((c,i)=>`<button class="tab${i===cat?" on":""}" role="tab" data-tab="${i}">${esc(c)}<span>${S.items.filter(x=>x.cat===i).length}</span></button>`).join("");
+  renderList();renderDet();
+}
+function renderList(){
+  const items=S.items.filter(x=>(cat===-1||x.cat===cat)&&(!terms(q).length||terms(q).some(w=>(x.name+" "+(x.pn||"")+" "+(x.loc||"")+" "+(x.bc||"")).toLowerCase().includes(w)))&&(!SUBS[cat]||sub==="ALL"||(SUBS[cat].includes(x.sub)?x.sub:"NONE")===sub)).sort((a,b)=>cat===-1?a.name.localeCompare(b.name):0);
+  shown=items;
+  $("list").innerHTML=`<img class="logo pronly" src="${LOGO}" alt="JNL">
+  <h2>${cat===-1?"All Items (A to Z)":esc(CATS[cat])}</h2>
+  ${SUBS[cat]?subBar():""}
+  <p class="pronly">Stock list as of ${today()}${SUBS[cat]&&sub!=="ALL"?", "+esc(sub==="NONE"?"Unassigned":sub):""}</p>
+  <div class="row noprint"><button data-act="sprint">Print stock list</button><button data-act="scsv">Export stock CSV</button><button class="mo" data-act="mkbc">Make barcodes</button><button class="mo" data-act="plabels">Print labels</button></div>
+  ${cat===-1?`<p class="mu">This list shows every item from all tabs. Add new items inside their own tab.</p>`:`<div class="row noprint mo"><input id="nn" placeholder="New item name" aria-label="Item name"><input id="nu" placeholder="Unit (pcs, set…)" aria-label="Unit"><input id="np" placeholder="Part no. (optional)" aria-label="Part number"><input id="nl" placeholder="Location (optional)" aria-label="Location"><input id="nb" placeholder="Barcode (optional)" aria-label="Barcode"><button data-act="scanadd">Scan</button><input id="no" type="number" min="0" placeholder="Opening stock" aria-label="Opening stock"><input id="nd" type="date" value="${today()}" aria-label="Date added" title="Date added">${SUBS[cat]?`<select id="ns" aria-label="Section">${SUBS[cat].map(s=>`<option${s===sub?" selected":""}>${esc(s)}</option>`).join("")}</select>`:""}<button class="p" data-act="add">Add item</button></div>`}
+  ${items.length?`<div class="scroll"><table><thead><tr><th>Item</th><th class="n">In stock</th></tr></thead><tbody>${items.map(i=>`<tr class="it${i.id===sel?" sel":""}" tabindex="0" data-item="${i.id}"><td>${esc(i.name)}${i.pn?` <span class="mu">P/N ${esc(i.pn)}</span>`:""}${i.loc?` <span class="mu">Loc: ${esc(i.loc)}</span>`:""}${cat===-1?` <span class="mu">${esc(CATS[i.cat])}${i.sub?" / "+esc(i.sub):""}</span>`:""}</td><td class="n">${bal(i)} <span class="mu">${esc(i.unit)}</span></td></tr>`).join("")}</tbody></table></div>`:`<p class="mu">${q?"No items match your search.":"No items in this tab yet. Add the first item above."}</p>`}`;
+}
+function renderDet(){
+  const i=find(sel);
+  if(!i||(cat!==-1&&i.cat!==cat)){$("det").innerHTML=`<h2>Item history</h2><p class="mu">Click an item to see its stock in, stock out and who withdrew it.</p>`;return}
+  let run=0;
+  const rows=[...i.tx].sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0).map(t=>{run+=t.type==="IN"?t.q:-t.q;return{...t,b:run}}).filter(t=>(!hf||t.d>=hf)&&(!ht||t.d<=ht)).reverse();
+  $("det").innerHTML=`<img class="logo pronly" src="${LOGO}" alt="JNL">
+  <h2>${esc(i.name)}</h2>
+  ${i.pn?`<p class="pronly">Part no. ${esc(i.pn)}</p>`:""}${i.loc?`<p class="pronly">Location: ${esc(i.loc)}</p>`:""}<p class="noprint mo"><label>Part no. <input id="ip" value="${esc(i.pn||"")}" placeholder="optional"></label> <label>Location <input id="il" value="${esc(i.loc||"")}" placeholder="optional"></label> <label>Barcode <input id="ic" value="${esc(i.bc||"")}" placeholder="optional"></label><button data-act="scanitem">Scan</button></p>
+  ${SUBS[i.cat]?`<p class="noprint mo"><label>Section <select id="is"><option value="">Unassigned</option>${SUBS[i.cat].map(s=>`<option${i.sub===s?" selected":""}>${esc(s)}</option>`).join("")}</select></label></p>${i.sub?`<p class="pronly">${esc(i.sub)}</p>`:""}`:""}
+  <div class="big">${bal(i)} <span class="mu" style="font-size:15px;font-weight:400">${esc(i.unit)} in stock</span></div>
+  <div class="row noprint mo" style="margin-top:12px">
+   <select id="tt" aria-label="Type"><option value="IN">Stock in</option><option value="OUT">Stock out</option></select>
+   <input id="tq" type="number" min="1" placeholder="Qty" aria-label="Quantity">
+   <input id="td" type="date" value="${today()}" aria-label="Date">
+   <input id="tw" placeholder="Received from / Withdrawn by" aria-label="Name">
+   <input id="tn" placeholder="Remarks (rig, job, PO…)" aria-label="Remarks">
+   <button class="p" data-act="tx">Save entry</button></div>
+  <p id="err" class="out noprint" role="alert"></p>
+  <p class="pronly">Printed ${today()}${hf||ht?". Showing "+(hf||"start")+" to "+(ht||"latest"):""}</p>
+  <div class="row noprint"><label>History from <input id="hf" type="date" value="${hf}"></label><label>to <input id="ht" type="date" value="${ht}"></label><button data-act="hclr">Show all dates</button><button data-act="hprint">Print history</button><button class="mo" data-act="plabel">Print label</button><button data-act="dtl">${dv?"Hide details":"View more details"}</button></div>
+  <p class="mu">${rows.length} entries shown: ${rows.filter(t=>t.type==="IN").reduce((a,t)=>a+t.q,0)} ${esc(i.unit)} in, ${rows.filter(t=>t.type==="OUT").reduce((a,t)=>a+t.q,0)} ${esc(i.unit)} out</p>
+  ${dv?detHtml(i,rows):""}
+  ${rows.length?`<div class="scroll"><table><thead><tr><th>Date</th><th>Type</th><th class="n">Qty</th><th>Name</th><th>Remarks</th><th class="n">Balance</th><th></th></tr></thead><tbody>${rows.map(t=>`<tr><td>${esc(t.d)}</td><td class="${t.type==="IN"?"in":"out"}">${t.type==="IN"?"Stock in":"Stock out"}</td><td class="n">${t.q}</td><td>${esc(t.w)}</td><td>${esc(t.n)}</td><td class="n">${t.b}</td><td><button class="x noprint mo" data-del="${t.id}" aria-label="Delete entry">${armed===t.id?"Sure?":"✕"}</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="mu">No history yet. Record the first stock in above.</p>`}
+  <p class="noprint mo"><button data-act="rm">${armed==="item"?"Sure? Delete item and history":"Delete item"}</button></p>`;
+}
+function err(m){const e=$("err");if(e)e.textContent=m}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-tab],[data-item],[data-act],[data-del],[data-sub]");
+  if(!t)return;
+  if(role!=="master"&&(t.dataset.act==="add"||t.dataset.act==="tx"||t.dataset.del||t.dataset.act==="rm"||["scanadd","scanitem","mkbc","plabels","plabel"].includes(t.dataset.act)))return;
+  armed=t.dataset.del||t.dataset.act==="rm"?armed:null;
+  if(t.dataset.tab!==undefined){cat=+t.dataset.tab;sub="ALL";sel=null;q="";$("q").value="";render()}
+  else if(t.dataset.item){sel=t.dataset.item;armed=null;renderList();renderDet()}
+  else if(t.dataset.act==="add"){
+    const name=$("nn").value.trim();if(!name)return $("nn").focus();
+    const it={id:uid(),cat,name,unit:$("nu").value.trim()||"pcs",pn:$("np").value.trim(),loc:$("nl").value.trim(),bc:$("nb").value.trim(),sub:$("ns")?$("ns").value:"",tx:[]};
+    if(it.bc&&S.items.some(x=>x.bc&&x.bc.toLowerCase()===it.bc.toLowerCase())){stat("That barcode is already used by another item.");return}
+    const o=parseInt($("no").value);
+    if(o>0)it.tx.push({id:uid(),type:"IN",q:o,d:$("nd").value||today(),w:"",n:"Opening stock"});
+    S.items.push(it);sel=it.id;save();render()}
+  else if(t.dataset.act==="tx"){
+    const i=find(sel),type=$("tt").value,qty=parseInt($("tq").value),w=$("tw").value.trim();
+    if(!(qty>0))return err("Enter a quantity greater than 0.");
+    
+    if(type==="OUT"&&qty>bal(i))return err("Only "+bal(i)+" "+i.unit+" in stock.");
+    i.tx.push({id:uid(),type,q:qty,d:$("td").value||today(),w,n:$("tn").value.trim()});
+    save();render()}
+  else if(t.dataset.del){
+    if(armed!==t.dataset.del){armed=t.dataset.del;return renderDet()}
+    const i=find(sel);i.tx=i.tx.filter(x=>x.id!==armed);armed=null;
+    if(bal(i)<0){i.tx.push({id:uid(),type:"IN",q:-bal(i),d:today(),w:"",n:"Adjustment"})}
+    save();render()}
+  else if(t.dataset.sub){sub=t.dataset.sub;sel=null;renderList();renderDet()}
+  else if(t.dataset.act==="scanadd"){openScan("assign",c=>{const x=$("nb");if(x)x.value=c})}
+  else if(t.dataset.act==="scanitem"){const id0=sel;openScan("assign",c=>{const i=find(id0);if(i){i.bc=c;save();render()}},id0)}
+  else if(t.dataset.act==="mkbc"){mkBarcodes()}
+  else if(t.dataset.act==="plabels"){printLabels(shown)}
+  else if(t.dataset.act==="plabel"){const i=find(sel);if(i)printLabels([i])}
+  else if(t.dataset.act==="dtl"){dv=!dv;renderDet()}
+  else if(t.dataset.act==="sprint"){document.body.classList.add("plist");try{window.print()}catch(x){}setTimeout(()=>document.body.classList.remove("plist"),1500)}
+  else if(t.dataset.act==="scsv"){const c=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';const L=[["Tab","Section","Item","Part No","Location","Barcode","Stock","Unit","As of"].map(c).join(",")];shown.forEach(i=>L.push([CATS[i.cat],i.sub||"",i.name,i.pn||"",i.loc||"",i.bc||"",bal(i),i.unit,today()].map(c).join(",")));dl("stock-"+(cat===-1?"all":CATS[cat].replace(/[^A-Za-z0-9]+/g,"-"))+"-"+today()+".csv",L.join("\n"),"text/csv")}
+  else if(t.dataset.act==="hclr"){hf="";ht="";renderDet()}
+  else if(t.dataset.act==="hprint"){try{window.print()}catch(x){}}
+  else if(t.dataset.act==="rm"){
+    if(armed!=="item"){armed="item";return renderDet()}
+    S.items=S.items.filter(x=>x.id!==sel);sel=null;armed=null;save();render()}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.dataset.item){sel=e.target.dataset.item;renderList();renderDet()}});
+$("q").addEventListener("input",e=>{q=e.target.value;renderList()});
+async function saveAs(data,def,key,mime,ext){
+  let nm=def;try{nm=localStorage.getItem("rig-name-"+key)||def}catch(e){}
+  if(window.showSaveFilePicker){
+    try{
+      const h=await window.showSaveFilePicker({id:key,startIn:"documents",suggestedName:nm,types:[{description:ext.slice(1).toUpperCase()+" file",accept:{[mime]:[ext]}}]});
+      const w=await h.createWritable();await w.write(data);await w.close();
+      try{localStorage.setItem("rig-name-"+key,h.name)}catch(e){}
+      stat("Saved: "+h.name);return;
+    }catch(e){if(e&&e.name==="AbortError")return}
+  }
+  dl(nm,data,mime);
+  stat("Downloaded as "+nm+". This browser view can't choose the folder.");
+}
+$("exp").onclick=()=>saveAs(JSON.stringify(S),"rig-inventory-backup.json","rig-backup","application/json",".json");
+let plan=null;
+function needX(){if(window.XLSX)return Promise.resolve(true);return new Promise(res=>{const el=document.createElement("script");el.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";el.onload=()=>res(!!window.XLSX);el.onerror=()=>res(false);document.head.appendChild(el)})}
+$("xex").onclick=async()=>{
+  if(!await needX()){stat("Could not load the Excel library. Check your internet connection.");return}
+  const items=[...S.items].sort((a,b)=>a.cat-b.cat||a.name.localeCompare(b.name));
+  const I=items.map(i=>({"ID":i.id,"Tab":CATS[i.cat],"Section":i.sub||"","Item":i.name,"Part No":i.pn||"","Location":i.loc||"","Barcode":i.bc||"","Unit":i.unit,"Current Stock":bal(i)}));
+  const T=[];items.forEach(i=>[...i.tx].sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0).forEach(t=>T.push({"Item ID":i.id,"Tab":CATS[i.cat],"Item":i.name,"Date":t.d,"Type":t.type==="IN"?"Stock in":"Stock out","Qty":t.q,"Name":t.w||"","Remarks":t.n||""})));
+  const wb=XLSX.utils.book_new();
+  const w1=XLSX.utils.json_to_sheet(I,{header:["ID","Tab","Section","Item","Part No","Location","Barcode","Unit","Current Stock"]});
+  w1["!cols"]=[{wch:10},{wch:24},{wch:14},{wch:36},{wch:16},{wch:18},{wch:18},{wch:8},{wch:14}];
+  const w2=XLSX.utils.json_to_sheet(T,{header:["Item ID","Tab","Item","Date","Type","Qty","Name","Remarks"]});
+  w2["!cols"]=[{wch:10},{wch:24},{wch:36},{wch:12},{wch:10},{wch:8},{wch:20},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,w1,"Items");XLSX.utils.book_append_sheet(wb,w2,"Transactions");
+  saveAs(XLSX.write(wb,{bookType:"xlsx",type:"array"}),"rig-inventory.xlsx","rig-excel","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",".xlsx");
+};
+function parseX(buf){
+  const wb=XLSX.read(buf,{type:"array"});
+  if(!wb.Sheets["Items"])throw new Error("The file needs a sheet named Items.");
+  const rows=ws=>ws?XLSX.utils.sheet_to_json(ws,{defval:""}):[];
+  const g=(r,k)=>{const key=Object.keys(r).find(x=>x.trim().toLowerCase()===k);return key===undefined?"":r[key]};
+  const pad=n=>String(n).padStart(2,"0");
+  const dateOf=v=>{
+    if(typeof v==="number"){const q=XLSX.SSF.parse_date_code(v);return q?q.y+"-"+pad(q.m)+"-"+pad(q.d):""}
+    const m=String(v).trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);if(m)return m[1]+"-"+pad(m[2])+"-"+pad(m[3]);
+    const d=new Date(v);return isNaN(d)||!String(v).trim()?"":d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())};
+  const catOf=v=>CATS.findIndex(c=>c.toLowerCase()===String(v).trim().toLowerCase());
+  const items=[],byId={},byKey={};let errors=0,nTx=0;
+  rows(wb.Sheets["Items"]).forEach(r=>{
+    const name=String(g(r,"item")).trim();if(!name)return;
+    const cat=catOf(g(r,"tab"));if(cat<0){errors++;return}
+    const sv=String(g(r,"section")).trim().toLowerCase();
+    const sub=(SUBS[cat]||[]).find(x=>x.toLowerCase()===sv)||"";
+    const it={id:String(g(r,"id")).trim()||uid(),cat,name,unit:String(g(r,"unit")).trim()||"pcs",pn:String(g(r,"part no")).trim(),loc:String(g(r,"location")).trim(),bc:String(g(r,"barcode")).trim(),sub,tx:[]};
+    if(byId[it.id])it.id=uid();
+    const op=Math.round(Number(g(r,"opening stock")));
+    if(op>0){it.tx.push({id:uid(),type:"IN",q:op,d:today(),w:"",n:"Opening stock"});nTx++}
+    items.push(it);byId[it.id]=it;byKey[cat+"|"+name.toLowerCase()]=it;
+  });
+  rows(wb.Sheets["Transactions"]).forEach(r=>{
+    const iid=String(g(r,"item id")).trim(),nm=String(g(r,"item")).trim().toLowerCase(),cat=catOf(g(r,"tab"));
+    const it=byId[iid]||byKey[cat+"|"+nm];
+    const ty=String(g(r,"type")).trim().toLowerCase(),type=/^(in|stock in|received|receive)/.test(ty)?"IN":/^(out|stock out|withdraw)/.test(ty)?"OUT":"";
+    const q=Math.round(Number(g(r,"qty"))),d=dateOf(g(r,"date"));
+    if(!it||!type||!(q>0)||!d){if(String(g(r,"item")).trim()||iid)errors++;return}
+    it.tx.push({id:uid(),type,q,d,w:String(g(r,"name")).trim(),n:String(g(r,"remarks")).trim()});nTx++;
+  });
+  return{items,errors,nTx};
+}
+$("ximp").onclick=()=>{if(role)$("xfile").click()};
+$("xfile").onchange=async e=>{
+  const f=e.target.files[0];e.target.value="";if(!f||!role)return;
+  if(!await needX()){stat("Could not load the Excel library. Check your internet connection.");return}
+  try{
+    plan=parseX(await f.arrayBuffer());
+    plan.name=f.name;
+    const neg=plan.items.filter(i=>bal(i)<0).length;
+    $("ibt").textContent="File: "+f.name+". Found "+plan.items.length+" items and "+plan.nTx+" entries."+(plan.errors?" Skipped "+plan.errors+" rows with a missing or unknown tab, item, date, type or quantity.":"")+(neg?" Warning: "+neg+" items have more stock out than stock in.":"")+(role==="master"?" Replace all data deletes everything currently in the inventory first.":" This only changes what you see on this screen. The shared inventory is not changed.");
+    $("ib").hidden=false;
+  }catch(err){plan=null;stat(err&&err.message?err.message:"That file could not be read.")}
+};
+function doneImport(msg){plan=null;$("ib").hidden=true;sel=null;save();render();stat(msg)}
+$("ibc").onclick=()=>{plan=null;$("ib").hidden=true};
+$("ibr").onclick=()=>{if(plan&&role&&role!=="master"){const pl=plan;plan=null;$("ib").hidden=true;showFile(pl.name,pl.items);stat("Showing "+pl.items.length+" items from "+pl.name+". Nothing was changed in the shared inventory.");return}if(plan&&role==="master"){const n=plan.items.length;S.items=plan.items;doneImport("Imported "+n+" items. Previous data was replaced.")}};
+$("iba").onclick=()=>{
+  if(!plan||!role)return;
+  if(role!=="master"){const ids=new Set(S.items.map(i=>i.id)),keys=new Set(S.items.map(i=>i.cat+"|"+i.name.toLowerCase()));const add=plan.items.filter(i=>{const k=i.cat+"|"+i.name.toLowerCase();if(ids.has(i.id)||keys.has(k))return false;ids.add(i.id);keys.add(k);return true});const pl=plan;plan=null;$("ib").hidden=true;showFile(pl.name,[...S.items,...add]);stat("Added "+add.length+" items to your view only. Nothing was changed in the shared inventory.");return}
+  const ids=new Set(S.items.map(i=>i.id)),keys=new Set(S.items.map(i=>i.cat+"|"+i.name.toLowerCase()));
+  let add=0,skip=0;
+  plan.items.forEach(i=>{const k=i.cat+"|"+i.name.toLowerCase();if(ids.has(i.id)||keys.has(k)){skip++;return}S.items.push(i);ids.add(i.id);keys.add(k);add++});
+  doneImport("Added "+add+" new items. Skipped "+skip+" that already exist.");
+};
+
+$("csv").onclick=()=>{
+  const c=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+  const L=[["Category","Item","Part No","Location","Barcode","Unit","Date","Type","Qty","Name","Remarks"].map(c).join(",")];
+  S.items.forEach(i=>i.tx.forEach(t=>L.push([CATS[i.cat]+(i.sub?" / "+i.sub:""),i.name,i.pn||"",i.loc||"",i.bc||"",i.unit,t.d,t.type,t.q,t.w,t.n].map(c).join(","))));
+  dl("rig-inventory-history.csv",L.join("\n"),"text/csv")};
+function dl(n,s,m){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([s],{type:m}));a.download=n;a.click()}
+$("imp").onclick=()=>$("file").click();
+$("file").onchange=e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||!Array.isArray(d.items)||d.items.some(i=>!i||!Array.isArray(i.tx)))throw 0;
+    if(role==="master"){S=d;sel=null;save();render()}else if(role){showFile(f.name,d.items)}}catch(x){stat("That file is not a valid backup file.")}};r.readAsText(f)};
+$("fbx").onclick=leaveFile;
+$("fbd").onclick=()=>{try{localStorage.removeItem(VK)}catch(e){}leaveFile();stat("Saved copy deleted.")};
+const SUBS={9:["MTU ENGINE","TDS HPU","CAT 3512","150 KVA","ATLAS COPCO"]};
+let sub="ALL";
+function subBar(){const L=S.items.filter(x=>x.cat===cat),un=L.filter(x=>!SUBS[cat].includes(x.sub)).length;const o=[["ALL","All",L.length],...SUBS[cat].map(s=>[s,s,L.filter(x=>x.sub===s).length])];if(un)o.push(["NONE","Unassigned",un]);return `<div class="row noprint">${o.map(([v,n,c])=>`<button class="${v===sub?"p":""}" data-sub="${esc(v)}">${esc(n)} ${c}</button>`).join("")}</div>`}
+function detHtml(i,rows){
+ const u=esc(i.unit),sum=a=>a.reduce((x,t)=>x+t.q,0);
+ if(!rows.length)return `<h3>Details</h3><p class="mu">No entries in this date range.</p>`;
+ const outs=rows.filter(t=>t.type==="OUT"),ins=rows.filter(t=>t.type==="IN");
+ const M={},D={},W={};
+ rows.forEach(t=>{const m=t.d.slice(0,7);M[m]=M[m]||{i:0,o:0};M[m][t.type==="IN"?"i":"o"]+=t.q;if(t.type==="OUT"){D[t.d]=(D[t.d]||0)+t.q;if(t.w)W[t.w]=(W[t.w]||0)+t.q}});
+ const ms=Object.keys(M).sort(),mx=Math.max(1,...ms.map(m=>M[m].o));
+ const ds=rows.map(t=>t.d).sort(),a=ds[0],z=ds[ds.length-1];
+ const span=(+z.slice(0,4)-+a.slice(0,4))*12+(+z.slice(5,7)-+a.slice(5,7))+1;
+ const lab=m=>new Date(m+"-01T00:00:00").toLocaleString("en",{month:"short",year:"numeric"});
+ const pd=Object.entries(D).sort((x,y)=>y[1]-x[1]||(x[0]<y[0]?-1:1))[0];
+ const pm=ms.filter(m=>M[m].o>0).sort((x,y)=>M[y].o-M[x].o||(x<y?-1:1))[0];
+ const wl=Object.entries(W).sort((x,y)=>y[1]-x[1]).slice(0,5);
+ const card=(l,v,t)=>`<div class="card"><span class="mu">${l}</span><b>${v}</b><span class="mu">${t||""}</span></div>`;
+ return `<h3>Details: ${esc(a)} to ${esc(z)}</h3><div class="cards">${card("Total withdrawn",sum(outs)+" "+u,outs.length+" withdrawals")}${card("Total received",sum(ins)+" "+u,ins.length+" entries")}${card("Average withdrawn per month",(sum(outs)/span).toFixed(1)+" "+u,span+" month"+(span>1?"s":""))}${card("Peak day",pd?pd[1]+" "+u:"None",pd?esc(pd[0]):"No withdrawals")}${card("Peak month",pm?M[pm].o+" "+u:"None",pm?lab(pm):"No withdrawals")}</div>
+ <div class="scroll"><table><thead><tr><th>Month</th><th class="n">Stock in</th><th class="n">Stock out</th><th></th></tr></thead><tbody>${ms.map(m=>`<tr><td>${lab(m)}</td><td class="n">${M[m].i}</td><td class="n">${M[m].o}</td><td style="width:35%"><span style="display:block;border-top:8px solid var(--out);width:${Math.round(M[m].o/mx*100)}%"></span></td></tr>`).join("")}</tbody></table></div>
+ ${wl.length?`<h3>Top withdrawers</h3><div class="scroll"><table><thead><tr><th>Name</th><th class="n">Withdrawn</th></tr></thead><tbody>${wl.map(([n,q])=>`<tr><td>${esc(n)}</td><td class="n">${q} ${u}</td></tr>`).join("")}</tbody></table></div>`:""}`}
+const terms=s=>s.toLowerCase().split(",").map(x=>x.trim()).filter(Boolean);
+function pickHtml(){
+ const L=S.items.filter(i=>(rc==="ALL"||String(i.cat)===rc)&&(rs==="ALL"||!SUBS[rc]||(SUBS[rc].includes(i.sub)?i.sub:"NONE")===rs)&&(!terms(rq).length||terms(rq).some(w=>(i.name+" "+(i.pn||"")+" "+(i.loc||"")+" "+(i.bc||"")).toLowerCase().includes(w)))).sort((a,b)=>a.cat-b.cat||a.name.localeCompare(b.name));
+ return `<details id="rd" class="noprint"${ropen?" open":""} style="margin-bottom:10px"><summary>Pick items${rsel.length?" ("+rsel.length+" selected)":""}</summary>${rsel.length?`<div class="row" style="margin-top:8px">${rsel.map(id=>{const x=find(id);return x?`<button data-unpick="${id}">${esc(x.name)} (${esc(CATS[x.cat])}) ✕</button>`:""}).join("")}</div><p class="mu">The report shows these picked items from all tabs. Change the tab or search below to find more items to tick.</p>`:""}<div class="row" style="margin-top:8px"><button id="rclr">Clear selection</button></div><div style="max-height:220px;overflow:auto">${L.length?L.map(i=>`<label style="padding:4px 0"><input type="checkbox" data-pick="${i.id}"${rsel.includes(i.id)?" checked":""}>${esc(i.name)} <span class="mu">${esc(CATS[i.cat])}${i.sub?" / "+esc(i.sub):""}</span></label>`).join(""):`<p class="mu">No items to pick.</p>`}</div></details>`}
+let rv=false,rf=today(),rt=today(),rk="ALL",rc="ALL",rq="",rs="ALL",rsel=[],ropen=false,hf="",ht="";
+function repRows(){const r=[];S.items.forEach(i=>{if(rsel.length?!rsel.includes(i.id):(rc!=="ALL"&&String(i.cat)!==rc)||(rs!=="ALL"&&SUBS[rc]&&(SUBS[rc].includes(i.sub)?i.sub:"NONE")!==rs)||(rsel.length&&!rsel.includes(i.id))||(terms(rq).length&&!terms(rq).some(w=>(i.name+" "+(i.pn||"")+" "+(i.loc||"")+" "+(i.bc||"")).toLowerCase().includes(w))))return;let run=0;[...i.tx].sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:0).forEach(t=>{run+=t.type==="IN"?t.q:-t.q;if(t.d>=rf&&t.d<=rt&&(rk==="ALL"||t.type===rk))r.push({c:CATS[i.cat]+(i.sub?" / "+i.sub:""),i:i.name,p:i.pn||"",l:i.loc||"",u:i.unit,b:run,...t})})});return r.sort((a,b)=>a.d<b.d?-1:a.d>b.d?1:a.c<b.c?-1:a.c>b.c?1:a.i<b.i?-1:a.i>b.i?1:0)}
+function renderRep(){
+  const r=repRows(),ni=r.filter(x=>x.type==="IN").length,no=r.length-ni;
+  $("rep").innerHTML=`<img class="logo pronly" src="${LOGO}" alt="JNL">
+  <h2>Transactions by date</h2>
+  <p class="pronly">From ${rf} to ${rt}${rk!=="ALL"?", "+(rk==="IN"?"stock in only":"stock out only"):""}${!rsel.length&&rc!=="ALL"?", tab: "+esc(CATS[+rc]):""}${!rsel.length&&rs!=="ALL"?", section: "+esc(rs==="NONE"?"Unassigned":rs):""}${rsel.length?", items: "+rsel.map(id=>{const x=find(id);return x?esc(x.name):""}).join(", "):""}${!rsel.length&&rq?", item: "+esc(rq):""}</p>
+  <div class="row"><label>From <input id="rf" type="date" value="${rf}"></label><label>To <input id="rt" type="date" value="${rt}"></label>
+  <select id="rk" aria-label="Type"><option value="ALL">All transactions</option><option value="IN">Stock in only</option><option value="OUT">Stock out only</option></select>
+  <select id="rc" aria-label="Tab"><option value="ALL">All tabs</option>${CATS.map((c,i)=>`<option value="${i}">${esc(c)}</option>`).join("")}</select>${SUBS[rc]?`<select id="rs" aria-label="Section"><option value="ALL">All sections</option>${SUBS[rc].map(s=>`<option>${esc(s)}</option>`).join("")}<option value="NONE">Unassigned</option></select>`:""}<input id="rq" type="search" placeholder="Item names, separated by commas" value="${esc(rq)}" aria-label="Filter by item name">
+  <button id="rcsv">Export CSV</button><button id="rprint">Print</button></div>
+  ${pickHtml()}<p class="mu">${r.length} transactions: ${ni} stock in, ${no} stock out. Set both dates the same for a single day.</p>
+  ${r.length?`<div class="scroll"><table><thead><tr><th>Date</th><th>Tab</th><th>Item</th><th>Type</th><th class="n">Qty</th><th>Name</th><th>Remarks</th><th class="n">Remaining</th></tr></thead><tbody>${r.map(t=>`<tr><td>${esc(t.d)}</td><td>${esc(t.c)}</td><td>${esc(t.i)}${t.p?` <span class="mu">P/N ${esc(t.p)}</span>`:""}${t.l?` <span class="mu">Loc: ${esc(t.l)}</span>`:""}</td><td class="${t.type==="IN"?"in":"out"}">${t.type==="IN"?"Stock in":"Stock out"}</td><td class="n">${t.q}</td><td>${esc(t.w)}</td><td>${esc(t.n)}</td><td class="n">${t.b} <span class="mu">${esc(t.u)}</span></td></tr>`).join("")}</tbody></table></div>`:`<p class="mu">No transactions on these dates. Try a different date or range.</p>`}`;
+  $("rk").value=rk;
+  $("rf").onchange=e=>{rf=e.target.value||rf;if(rt<rf)rt=rf;renderRep()};
+  $("rt").onchange=e=>{rt=e.target.value||rt;if(rt<rf)rf=rt;renderRep()};
+  $("rk").onchange=e=>{rk=e.target.value;renderRep()};
+  $("rc").value=rc;
+  $("rc").onchange=e=>{rc=e.target.value;rs="ALL";renderRep()};
+  if($("rs")){$("rs").value=rs;$("rs").onchange=e=>{rs=e.target.value;renderRep()}}
+  $("rd").ontoggle=e=>{ropen=e.target.open};
+  $("rclr").onclick=()=>{rsel=[];renderRep()};
+  document.querySelectorAll("[data-unpick]").forEach(b=>b.onclick=()=>{rsel=rsel.filter(x=>x!==b.dataset.unpick);renderRep()});
+  $("rq").oninput=e=>{rq=e.target.value;renderRep();const x=$("rq");x.focus();x.setSelectionRange(x.value.length,x.value.length)};
+  $("rprint").onclick=()=>{try{window.print()}catch(x){}};
+  $("rcsv").onclick=()=>{
+    const c=v=>'"'+String(v==null?"":v).replace(/"/g,'""')+'"';
+    const L=[["Date","Tab","Item","Part No","Location","Type","Qty","Name","Remarks","Remaining"].map(c).join(",")];
+    repRows().forEach(t=>L.push([t.d,t.c,t.i,t.p,t.l,t.type,t.q,t.w,t.n,t.b].map(c).join(",")));
+    dl("transactions-"+rf+"_to_"+rt+".csv",L.join("\n"),"text/csv")};
+}
+document.addEventListener("change",e=>{const id=e.target.id;if((id==="is"||id==="ip"||id==="il"||id==="ic")&&role!=="master")return;if(id==="hf"){hf=e.target.value;renderDet()}else if(id==="ht"){ht=e.target.value;renderDet()}else if(id==="ic"){const i=find(sel);if(i){const v=e.target.value.trim();if(v&&S.items.some(x=>x.id!==i.id&&x.bc&&x.bc.toLowerCase()===v.toLowerCase())){stat("That barcode is already used by another item.");e.target.value=i.bc||"";return}i.bc=v;save();render()}}else if(id==="il"){const i=find(sel);if(i){i.loc=e.target.value.trim();save();render()}}else if(id==="ip"){const i=find(sel);if(i){i.pn=e.target.value.trim();save();render()}}else if(id==="is"){const i=find(sel);if(i){i.sub=e.target.value;save();render()}}else if(e.target.dataset.pick){const p=e.target.dataset.pick;rsel=e.target.checked?[...rsel,p]:rsel.filter(x=>x!==p);renderRep()}});
+let bv=false,bl=[],bh={w:"",d:today(),n:""},bq="",bmsg="";
+function showView(v){
+  rv=v==="rep";bv=v==="batch";
+  $("mn").hidden=v!=="inv";$("rm").hidden=!rv;$("bm").hidden=!bv;$("tabs").hidden=v!=="inv";$("q").hidden=v!=="inv";
+  $("rpt").textContent=rv?"Back to inventory":"Date report";
+  $("bwb").textContent=bv?"Back to inventory":"Batch withdraw";
+  if(bv&&!bl.length){bh.d=today();bmsg=""}
+  if(rv)renderRep();if(bv)renderBatch();
+}
+$("rpt").onclick=()=>showView(rv?"inv":"rep");
+$("bwb").onclick=()=>{if(role==="master")showView(bv?"inv":"batch")};
+function bmatch(){
+  const w=terms(bq);if(!w.length)return[];
+  return S.items.filter(i=>!bl.some(l=>l.id===i.id)&&w.some(x=>(i.name+" "+(i.pn||"")+" "+(i.loc||"")+" "+(i.bc||"")).toLowerCase().includes(x))).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,30);
+}
+function renderBatch(){
+  const hits=bmatch(),ls=bl.map(l=>({l,i:find(l.id)})).filter(x=>x.i);
+  const meta=i=>esc(CATS[i.cat])+(i.sub?" / "+esc(i.sub):"")+(i.pn?" | P/N "+esc(i.pn):"")+(i.loc?" | Loc "+esc(i.loc):"");
+  $("bt").innerHTML=`<h2>Batch withdrawal</h2>
+  <p class="mu">Withdraw several items at once. Each line is saved as its own stock out entry with the same name, date and remarks.</p>
+  <div class="row"><input id="bwho" placeholder="Withdrawn by (optional)" value="${esc(bh.w)}" aria-label="Withdrawn by"><label>Date <input id="bdate" type="date" value="${esc(bh.d)}"></label><input id="bnote" placeholder="Remarks (rig, job, PO...)" value="${esc(bh.n)}" aria-label="Remarks"></div>
+  <div class="row"><input id="bsrch" type="search" placeholder="Search item name, part no. or location to add" value="${esc(bq)}" aria-label="Search items to add"><button data-bscan="1">Scan item</button></div>
+  ${hits.length?`<div class="scroll" style="max-height:240px;overflow:auto"><table><tbody>${hits.map(i=>`<tr><td>${esc(i.name)}<br><span class="mu">${meta(i)}</span></td><td class="n">${bal(i)} ${esc(i.unit)}</td><td><button data-badd="${i.id}">Add</button></td></tr>`).join("")}</tbody></table></div>`:(bq.trim()?`<p class="mu">No matching items.</p>`:"")}
+  <h3>Items to withdraw (${ls.length})</h3>
+  ${ls.length?`<div class="scroll"><table><thead><tr><th>Item</th><th class="n">In stock</th><th class="n">Qty</th><th></th></tr></thead><tbody>${ls.map(({l,i})=>`<tr><td>${esc(i.name)}<br><span class="mu">${meta(i)}</span></td><td class="n">${bal(i)} ${esc(i.unit)}</td><td class="n"><input type="number" min="1" max="${bal(i)}" value="${l.q}" data-bqty="${i.id}" style="width:80px" aria-label="Quantity"></td><td><button class="x" data-brm="${i.id}" aria-label="Remove">\u2715</button></td></tr>`).join("")}</tbody></table></div>`:`<p class="mu">No items yet. Search above and click Add.</p>`}
+  <p id="berr" class="out" role="alert"></p>${bmsg?`<p class="in" role="status">${esc(bmsg)}</p>`:""}
+  <div class="row"><button class="p" data-bsave="1">Save withdrawals</button><button data-bclr="1">Clear list</button></div>`;
+}
+function saveBatch(){
+  const ls=bl.map(l=>({l,i:find(l.id)})).filter(x=>x.i),er=$("berr");
+  if(!ls.length){er.textContent="Add at least one item.";return}
+  const bad=ls.find(x=>!(x.l.q>0)||x.l.q>bal(x.i));
+  if(bad){er.textContent=bal(bad.i)>0?"Check the quantity for "+bad.i.name+": it must be between 1 and "+bal(bad.i)+" "+bad.i.unit+".":bad.i.name+" has no stock left. Remove it from the list.";return}
+  const d=bh.d||today(),w=bh.w.trim(),n=bh.n.trim();
+  ls.forEach(x=>x.i.tx.push({id:uid(),type:"OUT",q:x.l.q,d,w,n}));
+  const c=ls.length;bl=[];bmsg="Saved "+c+" withdrawal"+(c>1?"s":"")+".";save();render();renderBatch();
+}
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-badd],[data-brm],[data-bsave],[data-bclr],[data-bscan]");
+  if(!t||role!=="master")return;
+  bmsg="";
+  if(t.dataset.badd){if(!bl.some(l=>l.id===t.dataset.badd))bl.push({id:t.dataset.badd,q:1});bq="";renderBatch();const x=$("bsrch");if(x)x.focus()}
+  else if(t.dataset.brm){bl=bl.filter(l=>l.id!==t.dataset.brm);renderBatch()}
+  else if(t.dataset.bclr){bl=[];renderBatch()}
+  else if(t.dataset.bscan)openScan("batch");
+  else if(t.dataset.bsave)saveBatch();
+});
+document.addEventListener("input",e=>{
+  const id=e.target.id,d=e.target.dataset;
+  if(id==="bwho")bh.w=e.target.value;
+  else if(id==="bnote")bh.n=e.target.value;
+  else if(id==="bdate")bh.d=e.target.value;
+  else if(id==="bsrch"){bq=e.target.value;renderBatch();const x=$("bsrch");x.focus();x.setSelectionRange(x.value.length,x.value.length)}
+  else if(d&&d.bqty){const l=bl.find(z=>z.id===d.bqty);if(l)l.q=parseInt(e.target.value)||0}
+});
+const C128="212222 222122 222221 121223 121322 131222 122213 122312 132212 221213 221312 231212 112232 122132 122231 113222 123122 123221 223211 221132 221231 213212 223112 312131 311222 321122 321221 312212 322112 322211 212123 212321 232121 111323 131123 131321 112313 132113 132311 211313 231113 231311 112133 112331 132131 113123 113321 133121 313121 211331 231131 213113 213311 213131 311123 311321 331121 312113 312311 332111 314111 221411 431111 111224 111422 121124 121421 141122 141221 112214 112412 122114 122411 142112 142211 241211 221114 413111 241112 134111 111242 121142 121241 114212 124112 124211 411212 421112 421211 212141 214121 412121 111143 111341 131141 114113 114311 411113 411311 113141 114131 311141 411131 211412 211214 211232 2331112".split(" ");
+function bcSvg(t){
+  const v=[104];for(const ch of String(t)){const c=ch.charCodeAt(0);if(c>=32&&c<=126)v.push(c-32)}
+  if(v.length<2)return"";
+  let sum=104;for(let i=1;i<v.length;i++)sum+=v[i]*i;
+  v.push(sum%103,106);
+  let x=10,r="";
+  v.forEach(k=>{const pt=C128[k];for(let j=0;j<pt.length;j++){const w=+pt[j];if(j%2===0)r+=`<rect x="${x}" y="0" width="${w}" height="40"/>`;x+=w}});
+  return `<svg viewBox="0 0 ${x+10} 40" preserveAspectRatio="none" shape-rendering="crispEdges" fill="#000">${r}</svg>`;
+}
+function mkBarcodes(){
+  const list=shown.filter(i=>!i.bc);
+  if(!list.length){stat("All items shown already have a barcode.");return}
+  let n=0;S.items.forEach(i=>{const m=/^JNL(\d{6})$/.exec(i.bc||"");if(m)n=Math.max(n,+m[1])});
+  list.forEach(i=>{n++;i.bc="JNL"+String(n).padStart(6,"0")});
+  save();render();stat("Made "+list.length+" barcodes. Click Print labels to print them.");
+}
+function printLabels(arr){
+  const L=arr.filter(i=>i.bc);
+  if(!L.length){stat("These items have no barcode yet. Click Make barcodes first.");return}
+  $("lbl").innerHTML=L.map(i=>`<div class="lb"><b>${esc(i.name)}</b><span>${[i.pn&&"P/N "+esc(i.pn),i.loc&&"Loc "+esc(i.loc)].filter(Boolean).join(" | ")}</span>${bcSvg(i.bc)}<div class="c">${esc(i.bc)}</div></div>`).join("");
+  if(arr.length>L.length)stat((arr.length-L.length)+" items without a barcode were left out.");
+  document.body.classList.add("plabels");try{window.print()}catch(e){}
+  setTimeout(()=>document.body.classList.remove("plabels"),1500);
+}
+let scanH=null,scanMode="",scanCb=null,scanTarget=null,scanSkip="",scanSkipAt=0,scanBusy=false;
+function sMsg(m,c){const e=$("smsg");e.textContent=m;e.className=c||"mu"}
+function loadScan(){
+  if(window.Html5Qrcode)return Promise.resolve(true);
+  return new Promise(res=>{const el=document.createElement("script");el.src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js";el.onload=()=>res(!!window.Html5Qrcode);el.onerror=()=>res(false);document.head.appendChild(el)});
+}
+async function closeScan(){
+  $("scan").hidden=true;
+  if(scanH){const h=scanH;scanH=null;try{await h.stop()}catch(e){}try{h.clear()}catch(e){}}
+}
+async function openScan(mode,cb,target){
+  if(scanBusy)return;scanBusy=true;
+  scanMode=mode;scanCb=cb||null;scanTarget=target||null;scanSkip="";
+  $("scan").hidden=false;$("scode").value="";
+  $("stitle").textContent=mode==="batch"?"Scan items to withdraw":mode==="assign"?"Scan a barcode to assign":"Scan an item";
+  sMsg("Starting camera...");
+  try{
+    if(!await loadScan()){sMsg("Could not load the scanner tool. Connect to the internet once, or type the code below.","out");return}
+    const F=Html5QrcodeSupportedFormats;
+    scanH=new Html5Qrcode("scanbox",{formatsToSupport:[F.QR_CODE,F.CODE_128,F.CODE_39,F.EAN_13,F.EAN_8,F.UPC_A,F.UPC_E,F.ITF,F.CODABAR],experimentalFeatures:{useBarCodeDetectorIfSupported:true},verbose:false});
+    await scanH.start({facingMode:"environment"},{fps:10,qrbox:(w,h)=>({width:Math.floor(w*0.85),height:Math.floor(Math.min(h,w)*0.45)})},t=>onCode(t),()=>{});
+    sMsg("Point the camera at a barcode.");
+  }catch(e){scanH=null;sMsg("Camera not available. Allow camera access, or type the code below.","out")}
+  finally{scanBusy=false}
+}
+function onCode(raw){
+  const code=String(raw).trim();if(!code)return;
+  const now=Date.now();
+  if(code===scanSkip&&now-scanSkipAt<1800)return;
+  scanSkip=code;scanSkipAt=now;
+  try{if(navigator.vibrate)navigator.vibrate(60)}catch(e){}
+  const low=code.toLowerCase();
+  if(scanMode==="assign"){
+    const dup=S.items.find(i=>(i.bc||"").toLowerCase()===low&&i.id!==scanTarget);
+    if(dup){sMsg("Code "+code+" is already used by "+dup.name+".","out");return}
+    closeScan();if(scanCb)scanCb(code);return;
+  }
+  const it=S.items.find(i=>(i.bc||"").toLowerCase()===low)||S.items.find(i=>(i.pn||"").toLowerCase()===low);
+  if(!it){sMsg("No item found for code "+code+".","out");return}
+  if(scanMode==="batch"){
+    if(bal(it)<=0){sMsg(it.name+" has no stock left.","out");return}
+    let l=bl.find(z=>z.id===it.id);
+    if(l){if(l.q<bal(it))l.q++}else{l={id:it.id,q:1};bl.push(l)}
+    bmsg="";renderBatch();sMsg("Added: "+it.name+" (qty "+l.q+")","in");return;
+  }
+  closeScan();showView("inv");cat=-1;sub="ALL";q="";$("q").value="";sel=it.id;render();
+  try{const r=document.querySelector('[data-item="'+it.id+'"]');if(r&&r.scrollIntoView)r.scrollIntoView({block:"center"})}catch(e){}
+}
+$("scanb").onclick=()=>openScan("find");
+$("sclose").onclick=closeScan;
+$("sgo").onclick=()=>{const v=$("scode").value;$("scode").value="";onCode(v)};
+$("scode").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();const v=$("scode").value;$("scode").value="";onCode(v)}});
+const LOGO="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjcgNCAxNzUgNzkiPjxnIGZpbGw9IiMwYjdhM2EiPjxwb2x5Z29uIHBvaW50cz0iNDUuMCwxMC4wIDQ1LjAsMjYuMCA0NS4wLDQzLjAgNDQuOSw0NC43IDQ0LjcsNDYuMiA0NC40LDQ3LjYgNDQuMCw0OC44IDQzLjUsNTAuMCA0Mi45LDUxLjAgNDIuMiw1MS45IDQxLjUsNTIuNyA0MC42LDUzLjQgMzkuNyw1NC4wIDM4LjcsNTQuNiAzNy41LDU1LjEgMzYuMyw1NS41IDM1LjAsNTUuOCAzMy41LDU1LjkgMzIuMCw1Ni4wIDMxLjEsNTYuMCAzMC40LDU1LjggMjkuNyw1NS43IDI5LjEsNTUuNCAyOC42LDU1LjIgMjguMiw1NC44IDI3LjcsNTQuNCAyNy4zLDUzLjkgMjYuOSw1My4zIDI2LjUsNTIuNSAyNi4xLDUxLjUgMjUuNyw1MC4zIDI1LjQsNDkuMCAyNS4yLDQ3LjUgMjUuMCw0NS45IDI1LjAsNDMuOCAxMy4wLDQ0LjIgMTMuMSw0Ni41IDEzLjMsNDguOSAxMy42LDUxLjIgMTQuMSw1My40IDE0LjcsNTUuNSAxNS42LDU3LjUgMTYuNSw1OS40IDE3LjcsNjEuMSAxOS4wLDYyLjcgMjAuNiw2NC4xIDIyLjIsNjUuMyAyNC4wLDY2LjMgMjUuOSw2Ny4xIDI3LjksNjcuNiAyOS45LDY3LjkgMzIuMCw2OC4wIDM0LjUsNjcuOSAzNy4wLDY3LjYgMzkuNCw2Ny4xIDQxLjcsNjYuNCA0My45LDY1LjQgNDYuMCw2NC4zIDQ4LjAsNjIuOSA0OS44LDYxLjMgNTEuNCw1OS42IDUyLjksNTcuNiA1NC4xLDU1LjUgNTUuMiw1My4yIDU2LjAsNTAuOCA1Ni41LDQ4LjMgNTYuOSw0NS43IDU3LjAsNDMuMCA1Ny4wLDI2LjAgNTcuMCwxMC4wIi8+PHBvbHlnb24gcG9pbnRzPSI3Mi4wLDYyLjAgNzIuMCwxMC4wIDg1LjAsMTAuMCAxMDguMCw0NC4wIDEwOC4wLDEwLjAgMTIwLjAsMTAuMCAxMjAuMCw2Mi4wIDEwNy4wLDYyLjAgODQuMCwyOC4wIDg0LjAsNjIuMCIvPjxwb2x5Z29uIHBvaW50cz0iMTM2LjAsMTAuMCAxNDguMCwxMC4wIDE0OC4wLDUwLjAgMTc2LjAsNTAuMCAxNzYuMCw2Mi4wIDEzNi4wLDYyLjAiLz48L2c+PHJlY3QgeD0iMTMiIHk9IjcxIiB3aWR0aD0iMTYzIiBoZWlnaHQ9IjYiIGZpbGw9IiNmMmIwMWUiLz48L3N2Zz4=";
+if($("lg"))$("lg").src=LOGO;
+$("gl").src=LOGO;
+let role=null,migrated=false,lastDocs=null,fileView=null,liveBackup=null;
+const VK="rig-inv-viewcopy";
+function loadCopy(){try{const r=localStorage.getItem(VK);return r?JSON.parse(r):null}catch(e){return null}}
+function showFile(name,items,keep){
+  if(!fileView)liveBackup=S.items;
+  fileView=name;S.items=items;sel=null;let kept=true;
+  if(keep!==false){try{localStorage.setItem(VK,JSON.stringify({name,items}))}catch(e){kept=false}}
+  $("fbt").textContent="Viewing file: "+name+(kept?". This read-only copy is kept on this device.":". This read-only copy could not be kept on this device because storage is full.");
+  $("fb").hidden=false;render();
+}
+function leaveFile(){if(!fileView)return;S.items=liveBackup||[];liveBackup=null;fileView=null;$("fb").hidden=true;sel=null;useDocs();render()}
+const PH="";
+async function sha(x){const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode("desco-inv:"+x));return Array.from(new Uint8Array(b)).map(v=>v.toString(16).padStart(2,"0")).join("")}
+function useDocs(){if(!role||!lastDocs)return;applyRemote(lastDocs);if(role==="master"){if(!migrated){migrated=true;try{localStorage.setItem(MK,"1")}catch(e){}}queueSync()}}
+function enter(r){role=r;if(r==="master"){try{const x=JSON.parse(localStorage.getItem(K)||"null");if(x&&Array.isArray(x.items))S.items=x.items}catch(e){}}document.body.classList.toggle("view",r!=="master");document.body.classList.remove("locked");$("gate").hidden=true;$("out").textContent=r==="master"?"Log out (Master)":"Exit view only";useDocs();if(r!=="master"&&!lastDocs){try{const c0=JSON.parse(localStorage.getItem("rig-inv-viewlive")||"null");if(Array.isArray(c0))S.items=c0}catch(e){}}if(r!=="master"){const c=loadCopy();if(c&&Array.isArray(c.items)){showFile(c.name,c.items,false);return}}render()}
+$("gm").onclick=()=>{$("g1").hidden=true;$("g2").hidden=false;$("gp").value="";$("ge").textContent="";try{$("gem").value=localStorage.getItem("rig-master-email")||""}catch(e){}($("gem").value?$("gp"):$("gem")).focus()};
+$("gb").onclick=()=>{$("g2").hidden=true;$("g1").hidden=false};
+$("gv").onclick=()=>{$("g1").hidden=true;$("g3").hidden=false;$("gvp").value="";$("gve").textContent="";$("gvp").focus()};
+$("gvb").onclick=()=>{$("g3").hidden=true;$("g1").hidden=false};
+$("gvok").onclick=()=>tryView();
+$("gvp").addEventListener("keydown",e=>{if(e.key==="Enter")tryView()});
+async function tryPw(){
+  const em=$("gem").value.trim(),pw=$("gp").value,er=$("ge");
+  er.textContent="";
+  if(!em||!pw){er.textContent="Enter your email and password.";return}
+  const offline=async()=>{
+    const ok=await checkCred("m",em,pw);
+    if(ok===true){pwMem={em,pw};if(AUTH&&AUTH.currentUser)listen();enter("master");stat("Offline: signed in on this device. Changes upload when you are online.");return}
+    er.textContent=ok===null?"No saved sign-in on this device yet. Connect to the internet and sign in once.":"Wrong email or password."};
+  if(!AUTH||!navigator.onLine){await offline();return}
+  try{await AUTH.signInWithEmailAndPassword(em,pw);try{localStorage.setItem("rig-master-email",em)}catch(e){}saveCred("m",em,pw);listen();enter("master")}
+  catch(e){const c=e&&e.code||"";if(c==="auth/network-request-failed"){await offline();return}er.textContent=c==="auth/too-many-requests"?"Too many attempts. Wait a few minutes and try again.":/invalid|wrong-password|user-not-found/.test(c)?"Wrong email or password.":"Sign-in problem ("+c+").";$("gp").select()}
+}
+async function tryView(){
+  const pw=$("gvp").value,er=$("gve");er.textContent="";
+  if(!pw){er.textContent="Enter the password.";return}
+  const offline=async()=>{
+    const ok=await checkCred("v",VIEWER_EMAIL,pw);
+    if(ok===true){pwMem={pw};if(AUTH&&AUTH.currentUser)listen();enter("view");return}
+    er.textContent=ok===null?"No saved sign-in on this device yet. Connect to the internet and enter the password once.":"Wrong password."};
+  if(!AUTH||!navigator.onLine){await offline();return}
+  try{await AUTH.signInWithEmailAndPassword(VIEWER_EMAIL,pw);saveCred("v",VIEWER_EMAIL,pw);listen();enter("view")}
+  catch(e){const c=e&&e.code||"";if(c==="auth/network-request-failed"){await offline();return}er.textContent=c==="auth/too-many-requests"?"Too many attempts. Wait a few minutes and try again.":/invalid|wrong-password|user-not-found/.test(c)?"Wrong password.":"Sign-in problem ("+c+").";$("gvp").select()}
+}
+$("gok").onclick=tryPw;
+$("gp").addEventListener("keydown",e=>{if(e.key==="Enter")tryPw()});
+$("out").onclick=()=>{unlisten();fbSignOut();pwMem=null;leaveFile();plan=null;$("ib").hidden=true;role=null;armed=null;sel=null;showView("inv");bl=[];document.body.classList.add("locked");document.body.classList.remove("view");$("gp").value="";$("g2").hidden=true;$("g3").hidden=true;$("gvp").value="";$("g1").hidden=false;$("gate").hidden=false};
+const FBCFG={apiKey:"AIzaSyABXdoD33cyOcN7hJw-7laDmy4TcFmDrys",authDomain:"rig-site-inventory.firebaseapp.com",projectId:"rig-site-inventory",storageBucket:"rig-site-inventory.firebasestorage.app",messagingSenderId:"332112336603",appId:"1:332112336603:web:b81269348618c3ec129efe"};
+const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==="object"&&!Array.isArray(v)?Object.keys(v).sort().reduce((a,x)=>(a[x]=v[x],a),{}):v);
+const sig=a=>canon(a.slice().sort((x,y)=>x.id<y.id?-1:1));
+const hs=s=>{let x=5381;for(let i=0;i<s.length;i++)x=((x<<5)+x+s.charCodeAt(i))|0;return (x>>>0).toString(36)+"."+s.length};
+const ck=o=>hs(canon(o));
+const SK="rig-inv-fbsynced",VL="rig-inv-viewlive",MK=K+"-shared";
+let DB=null,AUTH=null,dv=false,shown=[],synced={},chain=Promise.resolve();
+try{synced=JSON.parse(localStorage.getItem(SK)||"{}")||{}}catch(e){synced={}}
+const persistSynced=()=>{try{localStorage.setItem(SK,JSON.stringify(synced))}catch(e){}};
+function stat(m){const e=$("st");if(e)e.textContent=m}
+function fbSignOut(){try{if(AUTH)AUTH.signOut()}catch(e){}}
+function tmo(p,ms){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej({code:"timeout"}),ms))])}
+function syncMsg(e){const c=e&&e.code||"";if(c==="permission-denied")return"Not allowed to save online. Log out and sign in again as master.";if(c==="timeout"||c==="unavailable"||c==="deadline-exceeded"||!navigator.onLine)return"Waiting to sync: no connection. Changes are saved on this device and will upload when you are online.";return"Could not save online ("+(c||"error")+"). Changes are kept on this device."}
+function pend(){const ids=new Set(S.items.map(i=>i.id));return S.items.some(i=>synced[i.id]!==ck(i))||Object.keys(synced).some(id=>!ids.has(id))}
+function queueSync(){chain=chain.then(runSync).catch(()=>{})}
+async function runSync(){
+  if(!DB||role!=="master")return;
+  const cur={};S.items.forEach(i=>cur[i.id]=i);
+  const ups=Object.keys(cur).filter(id=>synced[id]!==ck(cur[id]));
+  const dels=Object.keys(synced).filter(id=>!(id in cur));
+  if(!Object.keys(cur).length&&dels.length>1){stat("Safety stop: this device has no items, so nothing was deleted online. Use Restore or Import to load your data.");return}
+  const ops=[...ups.map(id=>["s",id]),...dels.map(id=>["d",id])];
+  for(let i=0;i<ops.length;i+=400){
+    const part=ops.slice(i,i+400),prev={},b=DB.batch();
+    part.forEach(([t,id])=>{prev[id]=synced[id];const r=DB.collection("items").doc(id);if(t==="s"){b.set(r,JSON.parse(canon(cur[id])));synced[id]=ck(cur[id])}else b.delete(r)});
+    try{await tmo(b.commit(),20000);part.forEach(([t,id])=>{if(t==="d")delete synced[id]});persistSynced();stat("Shared: all changes saved")}
+    catch(e){part.forEach(([t,id])=>{if(t==="s"){if(prev[id]===undefined)delete synced[id];else synced[id]=prev[id]}});persistSynced();stat(syncMsg(e));return}
+  }
+}
+function applyRemote(docs){
+  const remote={},local={},next=[];
+  docs.forEach(d=>{remote[d.id]=Object.assign({},d.data(),{id:d.id})});
+  S.items.forEach(i=>local[i.id]=i);
+  if(role!=="master"){
+    if(fileView)return;
+    const n=Object.values(remote);
+    if(sig(n)!==sig(S.items)){S.items=n;try{localStorage.setItem(VL,JSON.stringify(n))}catch(e){}render()}
+    return}
+  for(const id in remote){
+    const l=local[id];
+    if(!l&&synced[id]!==undefined)continue;
+    if(l&&synced[id]!==undefined&&synced[id]!==ck(l))next.push(l);
+    else{next.push(remote[id]);synced[id]=ck(remote[id])}
+  }
+  for(const id in local){
+    if(id in remote)continue;
+    const l=local[id];
+    if(synced[id]===undefined||synced[id]!==ck(l))next.push(l);
+    else delete synced[id];
+  }
+  persistSynced();
+  if(sig(next)!==sig(S.items)){S.items=next;try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}render()}
+}
+const VIEWER_EMAIL="viewer@jnl-rig-site.com";
+let unsub=null,pwMem=null;
+const enc=new TextEncoder();
+const hx=a=>Array.from(a).map(v=>v.toString(16).padStart(2,"0")).join("");
+async function pbk(pw,salt){const k=await crypto.subtle.importKey("raw",enc.encode(pw),"PBKDF2",false,["deriveBits"]);return hx(new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2",salt,iterations:150000,hash:"SHA-256"},k,256)))}
+async function saveCred(kind,id,pw){try{const salt=crypto.getRandomValues(new Uint8Array(16));localStorage.setItem("rig-cred-"+kind,JSON.stringify({s:hx(salt),h:await pbk(id.toLowerCase()+"|"+pw,salt)}))}catch(e){}}
+async function checkCred(kind,id,pw){try{const c=JSON.parse(localStorage.getItem("rig-cred-"+kind)||"null");if(!c)return null;return(await pbk(id.toLowerCase()+"|"+pw,Uint8Array.from(c.s.match(/../g).map(x=>parseInt(x,16)))))===c.h}catch(e){return false}}
+function unlisten(){if(unsub){try{unsub()}catch(e){}unsub=null}}
+function listen(){
+  if(unsub||!DB)return;
+  stat("Connecting to shared data...");
+  const tm=setTimeout(()=>stat("Can't reach shared data yet. Showing this device's copy."),10000);
+  unsub=DB.collection("items").onSnapshot(snap=>{
+    if(snap.metadata.fromCache)return;
+    clearTimeout(tm);lastDocs=snap.docs;useDocs();
+    stat(role==="master"&&pend()?"Shared: connected. Changes waiting to upload.":"Shared: connected");
+  },e=>{clearTimeout(tm);unsub=null;stat(e&&e.code==="permission-denied"?"Shared data is locked for this account. Check the Firestore rules.":"Shared data error ("+(e&&e.code)+"). Showing this device's copy.")});
+}
+async function reauth(){
+  if(!role||!AUTH||AUTH.currentUser||!navigator.onLine||!pwMem)return;
+  try{await AUTH.signInWithEmailAndPassword(role==="master"?pwMem.em:VIEWER_EMAIL,pwMem.pw);listen()}catch(e){}
+}
+(async()=>{
+  if(!window.firebase){stat("Saved on this device only. Online sync could not load. Open the app once with internet.");return}
+  try{firebase.initializeApp(FBCFG);DB=firebase.firestore()}catch(e){stat("Could not start online sync.");return}
+  try{AUTH=firebase.auth()}catch(e){AUTH=null}
+  window.addEventListener("online",()=>{reauth().then(queueSync)});
+  setInterval(()=>{reauth();if(role==="master"&&DB&&pend())queueSync()},30000);
+})();
+render();
+if("serviceWorker" in navigator&&!window.claude&&/^https?:/.test(location.protocol)){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+</script></body></html>
